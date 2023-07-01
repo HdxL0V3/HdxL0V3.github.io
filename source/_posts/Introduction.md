@@ -7,7 +7,7 @@ categories: 介绍
 
 # 博客介绍与反思总结 v1.0.0
 
-本次使用hexo+github pages实现了一个简单的个人静态博客（用于个人学习过程中的**技术总结**），选用的主题为butterfly theme。之前我尝试实现过一个类似的博客，这一次在了解了新的知识后，修复了原有的一些瑕疵（如图片资源的引用问题），实现了一个更完善的博客。
+本次使用hexo+github pages实现了一个简单的个人静态博客（用于个人学习过程中的**技术总结**），选用的主题为butterfly theme。之前我尝试实现过一个类似的博客，这一次在了解了新的知识后，修复了原有的一些瑕疵（如图片资源的引用问题、自动部署的问题），实现了一个更完善的博客。
 
 ## 环境版本
 
@@ -171,6 +171,8 @@ Info栏显示该博客最近的使用状态，给出了UV、PV等指标；
 
 ### 项目结构
 
+仓库中有两个分支，其中main为编译后部署的hexo静态页面，source_code分支为源代码。
+
 ![](Introduction/18.png)
 
 如上，使用hexo框架并导入了butterfly主题，在_config.yml中完成相应配置即可，故这里主要介绍一下source目录（页面结构）。
@@ -214,9 +216,44 @@ source/tags：实现前文提到的Tags页，需要在首部的type标签中表�
 
 source/images：最开始测试部署时使用的统一的本地图片目录，后续文章不使用该目录（按文章分类存放本地图片）。
 
+### 使用Github Actions自动部署
+
+由于hexo自带的部署命令需要先配置好hexo环境和相关插件，不便于我在多个设备上进行博客维护，故借助Github Actions实现了一个自动部署功能，把更新push到仓库即可自动完成博客部署的更新。
+
+使用仓库Action完成自动部署，在仓库目录下新建了一个source_code分支：
+
+![](Introduction/19.png)
+
+在.github/workflows/deploy.yml中编写部署actions，代码详见仓库，注意这里要先在仓库的secrets中添加正确的Personal access tokens：
+
+![](Introduction/20.png)
+
+完成以上设置后即可在任意环境完成博客的更新和自动部署，示例如下：
+
+```
+// 在新机器克隆仓库（机器有git密钥）
+git clone https://github.com/HdxL0V3/HdxL0V3.github.io.git
+// 切换到源代码分支
+git checkout source_code
+// 修改博客文章或博客代码
+...
+// 将修改push到仓库
+git add .
+git commit -m 'description'
+git push
+```
+
+接着查看仓库中的actions进行情况和网站情况即可：
+
+![](Introduction/21.png)
+
+顺利完成。
+
+
+
 ### 主要遇到的问题
 
-**文章的图片资源加载问题**
+#### **文章的图片资源加载问题**
 
 在我之前的博客实现经验中，在hexos中使用本地图片是一件麻烦的事情——在markdown中图片地址和最后生成的网页中文章中的图片地址不一致。解决这个问题需要打上一些相关的插件或者是使用图床，但无论哪种方法我都认为不够直观、便捷（不能使用markdown原生的书写语法，而且还有广告和付费的问题）。
 
@@ -237,6 +274,27 @@ marked:
 （如下，可以在_posts目录下为每个文章md提供一个同名目录，用于存放其所需的图片）
 
 ![](Introduction/17.png)
+
+#### 自动部署Action执行失败
+
+如下，执行时报错：
+
+![](Introduction/22.png)
+
+根据报错信息，查看代码发现是仓库分支名错误，本地git init后生成的分支为master，原先以为是main故导致命令错误，修改deploy.yml中对应命令后即可修复，如下：
+
+```
+      # 将编译后的博客文件推送到指定仓库
+      run: |
+        cd ./public && git init && git add .
+        git config user.name "HdxL0V3"
+        git config user.email "1191845623@qq.com"
+        git add .
+        git commit -m "GitHub Actions Auto Builder at $(date +'%Y-%m-%d %H:%M:%S')"
+        git push --force --quiet "https://${{ secrets.ACCESS_TOKEN }}@$GITHUB_REPO" master:main
+```
+
+
 
 ## 总结
 
